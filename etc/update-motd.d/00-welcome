@@ -1,0 +1,22 @@
+#!/bin/sh
+
+_get_utc_date_with_ordinal() {
+	day=$(date -u +%-d 2>/dev/null || date -u +%e | sed 's/^ //')
+
+	n=$((day % 100))
+
+	if [ "$n" -ge 11 ] && [ "$n" -le 13 ]; then
+		suf=th
+	else
+		case $((day % 10)) in
+			1) suf=st ;;
+			2) suf=nd ;;
+			3) suf=rd ;;
+			*) suf=th ;;
+		esac
+	fi
+
+	printf "%s the %s%s of %s, %s\n" "$(date -u '+%A')" "$day" "$suf" "$(date -u '+%B %Y')" "$(date -u '+%I:%M %p UTC')"
+}
+
+printf "\n Hello %s, welcome back to %s. It is %s.\n\n" "$(whoami)" "$(hostname)" "$(_get_utc_date_with_ordinal)"

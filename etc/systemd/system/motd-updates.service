@@ -1,0 +1,7 @@
+[Unit]
+Description=Compute MOTD update counts
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/motd-updates.sh
+

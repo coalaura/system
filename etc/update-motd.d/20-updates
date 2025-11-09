@@ -1,0 +1,20 @@
+#!/bin/bash
+
+OUT="/var/cache/motd-updates"
+
+printf " Updates\n"
+
+if [ -r "$OUT" ]; then
+    read -r upg sec < <(awk 'NR<=2{print $0}' "$OUT")
+else
+    upg=0
+    sec=0
+fi
+
+if [ "${upg:-0}" -gt 0 ]; then
+    printf "  %s updates can be applied immediately.\n\n" "$upg"
+
+    [ "${sec:-0}" -gt 0 ] && printf "  %s of these updates are security updates.\n\n" "$sec"
+else
+    printf "  No new updates can be applied immediately.\n\n"
+fi

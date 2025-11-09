@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Lightweight system info (fast, no landscape)
+printf " System information\n"
+
+# load (fast)
+load=$(cut -d' ' -f1 /proc/loadavg)
+
+printf "  System load:           %s\n" "$load"
+
+# root fs usage and size
+read size usedp _ < <(df -h / --output=size,pcent,target 2>/dev/null | awk 'NR==2{print $1,$2,$3}')
+
+printf "  Usage of /:            %s of %s\n" "${usedp}" "${size:-?}"
+
+# memory & swap percent using /proc/meminfo (very cheap)
+read -r memtotal memfree <<< "$(awk '/MemTotal|MemAvailable/ {a[++i]=$2} END{if(i>=2) printf "%d %d", a[1], a[2]}' /proc/meminfo)"
+
+if [ -n "$memtotal" ] && [ "$memtotal" -gt 0 ]; then
+	mempct=$((((memtotal - memfree) * 100) / memtotal))
+else
+	mempct=0
+fi
+
+swap_total=$(awk '/SwapTotal/ {print $2}' /proc/meminfo)
+swap_used=$(awk '/SwapTotal|SwapFree/ {a[++i]=$2} END{if(i>=2) printf "%d", a[1]-a[2]; else print 0}' /proc/meminfo)
+swap_pct=0
+
+if [ -n "$swap_total" ] && [ "$swap_total" -gt 0 ]; then
+	swap_pct=$(( swap_used * 100 / swap_total ))
+fi
+
+printf "  Memory usage:          %s%%\n" "$mempct"
+printf "  Swap usage:            %s%%\n" "$swap_pct"
+
+# processes and users
+procs=$(ps -e --no-headers | wc -l)
+users=$(who --count | awk -F= '/users/ {print $2}')
+
+printf "  Processes:             %s\n" "$procs"
+printf "  Users logged in:       %s\n" "$users"
+
+# primary interface and IPs (single ip route call)
+iface=$(ip route get 1.1.1.1 2>/dev/null | awk '/dev/ {for(i=1;i<=NF;i++) if($i=="dev") print $(i+1); exit}')
+
+[ -z "$iface" ] && iface=ens3
+
+ipv4=$(ip -4 -o addr show dev "$iface" 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -n1)
+ipv6=$(ip -6 -o addr show dev "$iface" scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -n1)
+
+[ -n "$ipv4" ] && printf "  IPv4 address for %s: %s\n" "$iface" "$ipv4"
+[ -n "$ipv6" ] && printf "  IPv6 address for %s: %s\n" "$iface" "$ipv6"
+
+# current uptime, pretty
+uptime_pretty=$(uptime -p 2>/dev/null | sed 's/^up //')
+
+printf "  System uptime:         %s\n\n" "$uptime_pretty"
