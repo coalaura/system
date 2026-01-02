@@ -1,0 +1,53 @@
+# Network
+Port 90
+AddressFamily inet
+ListenAddress 0.0.0.0
+
+# Authentication
+PermitRootLogin prohibit-password
+PubkeyAuthentication yes
+PasswordAuthentication no
+PermitEmptyPasswords no
+ChallengeResponseAuthentication no
+KbdInteractiveAuthentication no
+AuthenticationMethods publickey
+
+# Users
+AllowUsers root
+
+# Brute-force mitigation
+LoginGraceTime 20s
+MaxAuthTries 3
+MaxSessions 8
+MaxStartups 10:30:60
+
+# Session management
+ClientAliveInterval 120
+ClientAliveCountMax 2
+TCPKeepAlive no
+
+# Disable unnecessary features
+X11Forwarding no
+AllowAgentForwarding no
+AllowTcpForwarding no
+PermitTunnel no
+GatewayPorts no
+PermitUserEnvironment no
+
+# Logging
+SyslogFacility AUTH
+LogLevel INFO
+LogVerbose kex*
+
+# Modern crypto only
+KexAlgorithms sntrup761x25519-sha512@openssh.com,curve25519-sha256,curve25519-sha256@libssh.org
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+
+# Other
+UsePAM yes
+UseDNS no
+PrintMotd no
+PrintLastLog yes
+AcceptEnv LANG LC_*
+Subsystem sftp /usr/lib/openssh/sftp-server

@@ -1,0 +1,204 @@
+types {
+    ##
+    # HTML & Web Documents
+    ##
+
+    text/html                                        html htm shtml;
+    application/xhtml+xml                            xhtml;
+
+    ##
+    # Stylesheets & Scripts
+    ##
+
+    text/css                                         css;
+    application/javascript                           js mjs;
+    application/wasm                                 wasm;
+
+    ##
+    # Data Interchange & Markup
+    ##
+
+    text/xml                                         xml;
+    application/json                                 json;
+    application/ld+json                              jsonld;
+    application/manifest+json                        webmanifest;
+    application/atom+xml                             atom;
+    application/rss+xml                              rss;
+    application/geo+json                             geojson;
+
+    ##
+    # Configuration & Structured Data
+    ##
+
+    application/toml                                 toml;
+    application/yaml                                 yaml yml;
+
+    ##
+    # Plain Text & Documents
+    ##
+
+    text/plain                                       txt;
+    text/markdown                                    md;
+    text/csv                                         csv;
+    text/calendar                                    ics;
+    text/mathml                                      mml;
+    text/vnd.sun.j2me.app-descriptor                 jad;
+    text/vnd.wap.wml                                 wml;
+    text/x-component                                 htc;
+
+    ##
+    # Images - Modern Formats
+    ##
+
+    image/avif                                       avif;
+    image/webp                                       webp;
+    image/jxl                                        jxl;
+    image/heic                                       heic heif;
+    image/svg+xml                                    svg svgz;
+
+    ##
+    # Images - Legacy Formats
+    ##
+
+    image/png                                        png;
+    image/jpeg                                       jpeg jpg;
+    image/gif                                        gif;
+    image/tiff                                       tif tiff;
+    image/x-icon                                     ico;
+    image/bmp                                        bmp;
+    image/x-jng                                      jng;
+    image/vnd.wap.wbmp                               wbmp;
+
+    ##
+    # Fonts
+    ##
+
+    font/woff                                        woff;
+    font/woff2                                       woff2;
+    font/ttf                                         ttf;
+    font/otf                                         otf;
+    application/vnd.ms-fontobject                    eot;
+
+    ##
+    # Audio
+    ##
+
+    audio/mpeg                                       mp3;
+    audio/aac                                        aac;
+    audio/ogg                                        ogg;
+    audio/flac                                       flac;
+    audio/wav                                        wav;
+    audio/x-m4a                                      m4a;
+    audio/midi                                       mid midi kar;
+
+    ##
+    # Video
+    ##
+
+    video/mp4                                        mp4;
+    video/webm                                       webm;
+    video/av1                                        av1;
+    video/ogg                                        ogv;
+    video/x-matroska                                 mkv;
+    video/quicktime                                  mov;
+    video/mpeg                                       mpeg mpg;
+    video/x-m4v                                      m4v;
+    video/x-flv                                      flv;
+    video/x-msvideo                                  avi;
+    video/x-ms-wmv                                   wmv;
+    video/x-ms-asf                                   asx asf;
+    video/mp2t                                       ts;
+    video/3gpp                                       3gpp 3gp;
+    video/x-mng                                      mng;
+
+    ##
+    # Streaming & Playlists
+    ##
+
+    application/vnd.apple.mpegurl                    m3u8;
+    application/xspf+xml                             xspf;
+
+    ##
+    # Office Documents - Microsoft
+    ##
+
+    application/msword                                                        doc;
+    application/vnd.ms-excel                                                  xls;
+    application/vnd.ms-powerpoint                                             ppt;
+    application/vnd.openxmlformats-officedocument.wordprocessingml.document   docx;
+    application/vnd.openxmlformats-officedocument.spreadsheetml.sheet         xlsx;
+    application/vnd.openxmlformats-officedocument.presentationml.presentation pptx;
+
+    ##
+    # Office Documents - OpenDocument
+    ##
+
+    application/vnd.oasis.opendocument.text          odt;
+    application/vnd.oasis.opendocument.spreadsheet   ods;
+    application/vnd.oasis.opendocument.presentation  odp;
+    application/vnd.oasis.opendocument.graphics      odg;
+
+    ##
+    # Documents - Other
+    ##
+
+    application/pdf                                  pdf;
+    application/rtf                                  rtf;
+    application/postscript                           ps eps ai;
+
+    ##
+    # Archives & Compressed
+    ##
+
+    application/zip                                  zip;
+    application/gzip                                 gz;
+    application/x-tar                                tar;
+    application/x-bzip2                              bz2;
+    application/x-7z-compressed                      7z;
+    application/x-rar-compressed                     rar;
+    application/x-xz                                 xz;
+    application/zstd                                 zst;
+
+    ##
+    # Packages & Installers
+    ##
+
+    application/vnd.debian.binary-package            deb;
+    application/x-redhat-package-manager             rpm;
+    application/java-archive                         jar war ear;
+
+    ##
+    # Binary & Executables
+    ##
+
+    application/octet-stream                         bin exe dll;
+    application/octet-stream                         dmg;
+    application/octet-stream                         iso img;
+    application/octet-stream                         msi msp msm;
+
+    ##
+    # Certificates & Security
+    ##
+
+    application/x-x509-ca-cert                       der pem crt;
+    application/pgp-keys                             asc;
+
+    ##
+    # Geographic
+    ##
+
+    application/vnd.google-earth.kml+xml             kml;
+    application/vnd.google-earth.kmz                 kmz;
+
+    ##
+    # Legacy / Compatibility
+    ##
+
+    application/mac-binhex40                         hqx;
+    application/vnd.wap.wmlc                         wmlc;
+    application/x-cocoa                              cco;
+    application/x-pilot                              prc pdb;
+    application/x-stuffit                            sit;
+    application/x-sea                                sea;
+    application/x-makeself                           run;
+}

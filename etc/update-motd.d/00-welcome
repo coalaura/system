@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 _get_utc_date_with_ordinal() {
 	day=$(date -u +%-d 2>/dev/null || date -u +%e | sed 's/^ //')
@@ -19,4 +19,31 @@ _get_utc_date_with_ordinal() {
 	printf "%s the %s%s of %s, %s\n" "$(date -u '+%A')" "$day" "$suf" "$(date -u '+%B %Y')" "$(date -u '+%I:%M %p UTC')"
 }
 
-printf "\n Hello %s, welcome back to %s. It is %s.\n\n" "$(whoami)" "$(hostname)" "$(_get_utc_date_with_ordinal)"
+printf "\n Hello %s, welcome back to %s" "$(whoami)" "$(hostname)"
+
+CLIENT_PORT=$(echo "$SSH_CONNECTION" | awk '{print $2}')
+LOGS=$(journalctl -u ssh -b -n 500 --no-pager)
+
+PID_LINE=$(echo "$LOGS" | grep "port $CLIENT_PORT" | grep -E "sshd(-session)?\[" | tail -n 1)
+PID=$(echo "$PID_LINE" | sed -nE 's/.*sshd(-session)?\[([0-9]+)\].*/\2/p')
+
+if [ -n "$PID" ]; then
+    ALGO_LINE=$(echo "$LOGS" | grep -E "sshd(-session)?\[$PID\]" | grep "kex: algorithm:" | tail -n 1)
+    ALGO=$(echo "$ALGO_LINE" | sed -n 's/.*kex: algorithm: \([^ ]*\).*/\1/p')
+fi
+
+if [ -z "$ALGO" ]; then
+	ALGO="N/A"
+fi
+
+if [[ "$ALGO" =~ sntrup761|mlkem768 ]]; then
+	printf " \e[0;32m(^_^)\e[0m\n"
+elif [[ "$ALGO" = "N/A" ]]; then
+	printf " \e[0;34m(._.)\e[0m\n"
+else
+	printf " \e[0;33m(>_<)\e[0m\n"
+fi
+
+printf "  %s\n" "$(_get_utc_date_with_ordinal)"
+
+printf "\n"
