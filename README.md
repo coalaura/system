@@ -1,6 +1,6 @@
 # system
 
-Common Linux system configurations for my servers.
+Common, optimized, opinionated linux system/server configurations.
 
 ## Structure
 
