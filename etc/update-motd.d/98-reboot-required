@@ -1,5 +1,10 @@
 #!/bin/sh
 
-if [ -x /usr/lib/update-notifier/update-motd-reboot-required ]; then
-    exec /usr/lib/update-notifier/update-motd-reboot-required
+running=$(uname -r)
+latest=$(find /boot/vmlinuz-* -type f 2>/dev/null | sort -V | tail -1 | sed 's|/boot/vmlinuz-||')
+
+if [ -n "$latest" ] && [ "$running" != "$latest" ]; then
+    printf " \033[91mSystem restart required (kernel: %s -> %s)\033[0m\n" "$running" "$latest"
+else
+    printf " No restart required (kernel: %s)\n" "$running"
 fi
