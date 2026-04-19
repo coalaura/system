@@ -10,6 +10,7 @@ Common, optimized, opinionated linux system/server configurations.
     ├── nginx/
     │   ├── mime.types
     │   ├── nginx.conf
+    │   ├── nginx.vps.conf # for small VPS
     │   └── wall.conf
     ├── ssh/
     │   └── sshd_config
