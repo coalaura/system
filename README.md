@@ -9,7 +9,7 @@ Common, optimized, opinionated linux system/server configurations.
 └── etc/
     ├── nginx/
     │   ├── mime.types
-    │   ├── nginx.conf
+    │   ├── nginx.conf # for dedicated
     │   ├── nginx.vps.conf # for small VPS
     │   └── wall.conf
     ├── ssh/
