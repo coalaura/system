@@ -5,14 +5,17 @@ set -Eeuo pipefail
 # Configuration
 ##
 
-OPENSSL_VER="3.5.5"
+OPENSSL_VER="4.0.0"
 OPENSSL_URL="https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VER}/openssl-${OPENSSL_VER}.tar.gz"
 
 STATIC_SSL_PATH="/opt/openssl-pq-static"
-NGINX_TRACK="mainline"
+NGINX_TRACK="stable" # stable is 1.30.0
 WORKDIR="/root/build-nginx-pq"
 LOG_FILE="/root/nginx_build.log"
 CODENAME=$(lsb_release -cs)
+
+# Ensure we use gcc for this (no zig/clang)
+export CC=gcc
 
 # Deb Packaging Identity
 export DEBEMAIL="laura@wiese2.org"
@@ -51,6 +54,9 @@ function timer_stop() {
 # Preparation
 ##
 
+# Remove any previous hold so dpkg can upgrade cleanly
+apt-mark unhold nginx 2>/dev/null || true
+
 # Cleaning build directories
 print_log "Cleaning build directories..."
 
@@ -66,7 +72,7 @@ apt-get update -qq
 apt-get install -y --no-install-recommends \
 	curl ca-certificates gnupg2 lsb-release devscripts \
 	dpkg-dev build-essential quilt perl python3 \
-	libpcre3-dev zlib1g-dev git cmake
+	libpcre2-dev libssl-dev zlib1g-dev libzstd-dev git cmake
 
 ##
 # OpenSSL Build (Static)
@@ -94,14 +100,36 @@ cd openssl-src
 	no-shared no-tests no-apps no-docs \
 	enable-ec_nistp_64_gcc_128 \
 	enable-tls1_3 enable-quic \
+	enable-ktls \
+	enable-zlib \
+	enable-zstd \
+	no-dtls \
 	linux-x86_64
 
-make -j"$(nproc)"
-make install_sw
+make -j"$(nproc)" || {
+	print_log "ERROR: OpenSSL build failed. Aborting."
+	exit 1
+}
+
+make install_sw || {
+	print_log "ERROR: OpenSSL install failed. Aborting."
+	exit 1
+}
 
 BUILD_TIMES[OpenSSL]=$(timer_stop)
 
 print_log "OpenSSL installed to ${STATIC_SSL_PATH}"
+
+# Verify OpenSSL build produced the required static libraries
+for lib in libssl.a libcrypto.a; do
+	if [ ! -f "${STATIC_SSL_PATH}/lib/${lib}" ]; then
+		print_log "ERROR: OpenSSL build did not produce ${lib}. Aborting."
+
+		exit 1
+	fi
+done
+
+print_log "OpenSSL static libraries verified"
 
 ##
 # Nginx Modules
@@ -128,11 +156,30 @@ mkdir -p out
 
 cd out
 
-cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_FLAGS="-Ofast -march=native -mtune=native -fPIC" ..
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_FLAGS="-Ofast -march=native -mtune=native -fPIC" .. || {
+	print_log "ERROR: Brotli cmake failed. Aborting."
 
-make -j"$(nproc)"
+	exit 1
+}
+
+make -j"$(nproc)" || {
+	print_log "ERROR: Brotli build failed. Aborting."
+
+	exit 1
+}
 
 BUILD_TIMES[Brotli]=$(timer_stop)
+
+# Verify Brotli build produced the required static libraries
+for lib in libbrotlienc.a libbrotlicommon.a; do
+	if [ ! -f "${WORKDIR}/ngx_brotli/deps/brotli/out/${lib}" ]; then
+		print_log "ERROR: Brotli build did not produce ${lib}. Aborting."
+
+		exit 1
+	fi
+done
+
+print_log "Brotli static libraries verified"
 
 ##
 # Nginx Source
@@ -140,25 +187,37 @@ BUILD_TIMES[Brotli]=$(timer_stop)
 
 cd "${WORKDIR}"
 
-# Ensure Official Repo exists
-if [ ! -f /etc/apt/sources.list.d/nginx.list ]; then
-	install -d /usr/share/keyrings
+install -d /usr/share/keyrings
 
-	curl -fsSL https://nginx.org/keys/nginx_signing.key | gpg --dearmor --yes -o /usr/share/keyrings/nginx-archive-keyring.gpg
+curl -fsSL https://nginx.org/keys/nginx_signing.key | gpg --dearmor --yes -o /usr/share/keyrings/nginx-archive-keyring.gpg
 
-	cat >/etc/apt/sources.list.d/nginx.list <<EOF
-deb     [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/${NGINX_TRACK}/debian ${CODENAME} nginx
-deb-src [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/${NGINX_TRACK}/debian ${CODENAME} nginx
+# Stable repo is at /packages/debian, mainline is at /packages/mainline/debian
+if [ "${NGINX_TRACK}" = "mainline" ]; then
+	NGINX_REPO_URL="https://nginx.org/packages/mainline/debian"
+else
+	NGINX_REPO_URL="https://nginx.org/packages/debian"
+fi
+
+cat >/etc/apt/sources.list.d/nginx.list <<EOF
+deb     [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] ${NGINX_REPO_URL} ${CODENAME} nginx
+deb-src [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] ${NGINX_REPO_URL} ${CODENAME} nginx
 EOF
 
-	apt-get update
-fi
+apt-get update
 
 # Fetch Source
 apt-get build-dep -y nginx
 apt-get source nginx
 
 NGSRC_DIR="$(find . -maxdepth 1 -type d -name 'nginx-*' | sort | tail -n1)"
+
+if [ -z "${NGSRC_DIR}" ]; then
+	print_log "ERROR: Failed to fetch nginx source. Aborting."
+
+	exit 1
+fi
+
+print_log "Using nginx source: ${NGSRC_DIR}"
 
 cd "${NGSRC_DIR}"
 
@@ -181,7 +240,7 @@ sed -i 's/--with-openssl=[^ ]*//g' "${RULES}"
 sed -i "s|--with-cc-opt=\"|--with-cc-opt=\"-I${STATIC_SSL_PATH}/include -I${WORKDIR}/ngx_brotli/deps/brotli/c/include |g" "${RULES}"
 
 # Inject Linker Flags
-sed -i "s|--with-ld-opt=\"|--with-ld-opt=\"-L${STATIC_SSL_PATH}/lib -L${WORKDIR}/ngx_brotli/deps/brotli/out -Wl,-Bstatic -lssl -lcrypto -lbrotlienc -lbrotlicommon -Wl,-Bdynamic -ldl -lpthread |g" "${RULES}"
+sed -i "s|--with-ld-opt=\"|--with-ld-opt=\"-L${STATIC_SSL_PATH}/lib -L${WORKDIR}/ngx_brotli/deps/brotli/out -Wl,-Bstatic -lssl -lcrypto -lbrotlienc -lbrotlicommon -Wl,-Bdynamic -lz -lzstd -ldl -lpthread |g" "${RULES}"
 
 # Ensure HTTP/3 is enabled
 if ! grep -q "with-http_v3_module" "${RULES}"; then
@@ -195,6 +254,29 @@ sed -i "s|\./configure |./configure --add-module=${WORKDIR}/headers-more-nginx-m
 print_log "Patched configure line:"
 grep -n "\./configure" "${RULES}" | head -5
 
+# Verify critical patches were applied
+if ! grep -q "openssl-pq-static" "${RULES}"; then
+	print_log "ERROR: OpenSSL path not found in patched rules! Aborting."
+
+	exit 1
+fi
+
+if ! grep -q "ngx_brotli" "${RULES}"; then
+	print_log "ERROR: Brotli module not found in patched rules! Aborting."
+
+	exit 1
+fi
+
+# Verify linker flags include required dynamic libraries
+if ! grep -q "\-lz " "${RULES}" || ! grep -q "\-lzstd" "${RULES}"; then
+	print_log "ERROR: Linker flags missing -lz and/or -lzstd (required by OpenSSL 4.0+). Aborting."
+	print_log "Hint: Check that the sed injection includes '-lz -lzstd' in the -Bdynamic section."
+
+	exit 1
+fi
+
+print_log "Patched rules verified"
+
 ##
 # Build & Install
 ##
@@ -206,7 +288,13 @@ print_log "Building Nginx Package..."
 
 timer_start
 
-DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -uc -us -j"$(nproc)"
+DEB_BUILD_OPTIONS=nocheck CC=gcc dpkg-buildpackage -b -uc -us -j"$(nproc)" -d || {
+	PRINT_ELAPSED=$(timer_stop)
+
+	print_log "ERROR: Nginx package build failed after ${PRINT_ELAPSED}. Check the log above."
+
+	exit 1
+}
 
 BUILD_TIMES[Nginx]=$(timer_stop)
 
@@ -214,9 +302,26 @@ print_log "Installing..."
 
 cd ..
 
-dpkg -i ./*.deb || apt-get -y -f install
+dpkg -i ./*.deb || true
 
 apt-mark hold nginx
+
+apt-get -y -f install
+
+# Verify the installed binary matches expectations
+INSTALLED_VER=$(nginx -v 2>&1 | grep -oP 'nginx/\K[0-9.]+' || true)
+if [ -z "${INSTALLED_VER}" ]; then
+	print_log "ERROR: nginx binary not found or not working after install. Aborting."
+
+	exit 1
+fi
+
+INSTALLED_SSL=$(nginx -V 2>&1 | grep -oP 'built with OpenSSL \K[^ ]+' || true)
+if [ "${INSTALLED_SSL}" != "${OPENSSL_VER}" ]; then
+	print_log "WARNING: Built OpenSSL (${INSTALLED_SSL}) doesn't match requested version (${OPENSSL_VER})!"
+fi
+
+print_log "Installed nginx ${INSTALLED_VER} with OpenSSL ${INSTALLED_SSL}"
 
 ##
 # Restart Nginx
@@ -225,7 +330,7 @@ apt-mark hold nginx
 print_log "Restarting nginx..."
 
 if nginx -t 2>/dev/null; then
-	systemctl reload nginx || systemctl restart nginx
+	systemctl restart nginx
 	print_log "Nginx restarted successfully"
 else
 	print_log "WARNING: nginx config test failed, not restarting"
@@ -249,3 +354,9 @@ echo -e "\033[1m========================================\033[0m"
 echo
 
 nginx -V 2>&1
+
+# Verify the built binary actually uses our OpenSSL
+BUILT_SSL=$(nginx -V 2>&1 | grep -oP 'built with OpenSSL \K[^ ]+')
+if [ "${BUILT_SSL}" != "${OPENSSL_VER}" ]; then
+	print_log "WARNING: Built OpenSSL (${BUILT_SSL}) doesn't match requested version (${OPENSSL_VER})!"
+fi
