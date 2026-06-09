@@ -14,6 +14,12 @@ Common, optimized, opinionated linux system/server configurations.
     │   └── wall.conf
     ├── ssh/
     │   └── sshd_config
+    ├── unbound/
+    │   ├── unbound.conf
+    │   └── unbound.conf.d
+    │       ├── dot.conf
+    │       ├── remote-control.conf
+    │       └── root-auto-trust-anchor-file.conf
     └── update-motd.d/
         ├── 00-welcome
         ├── 10-sysinfo
