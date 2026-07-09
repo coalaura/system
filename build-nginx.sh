@@ -5,11 +5,18 @@ set -Eeuo pipefail
 # Configuration
 ##
 
-OPENSSL_VER="4.0.0"
-OPENSSL_URL="https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VER}/openssl-${OPENSSL_VER}.tar.gz"
+NGINX_TRACK="stable" # stable is 1.30.3 (as of last update to this script)
 
+OPENSSL_VER="4.0.1"
+OPENSSL_SHA256="2db3f3a0d6ea4b59e1f094ace2c8cd536dffb87cdc39084c5afa1e6f7f37dd09"
+OPENSSL_URL="https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VER}/openssl-${OPENSSL_VER}.tar.gz"
 STATIC_SSL_PATH="/opt/openssl-pq-static"
-NGINX_TRACK="stable" # stable is 1.30.0
+
+HEADERS_MORE_REF="0bf283ff92017acd616814b0e5153e0ccf93e2c9" # identical to v0.40
+
+NGX_BROTLI_REF="a71f9312c2deb28875acc7bacfdd5695a111aa53" # 9 commits ahead of v1.0.0rc
+BROTLI_CFLAGS="-O3 -fPIC"
+
 WORKDIR="/root/build-nginx-pq"
 LOG_FILE="/root/nginx_build.log"
 CODENAME=$(lsb_release -cs)
@@ -23,13 +30,14 @@ export DEBFULLNAME="Laura"
 
 # Timing variables
 declare -A BUILD_TIMES
+
 BUILD_START=0
 
 ##
 # Logging
 ##
 
-rm -f $LOG_FILE
+rm -f "$LOG_FILE"
 
 exec > >(tee -a "${LOG_FILE}") 2>&1
 
@@ -78,26 +86,48 @@ apt-get install -y --no-install-recommends \
 # OpenSSL Build (Static)
 ##
 
+cd "${WORKDIR}"
+
+print_log "Downloading OpenSSL ${OPENSSL_VER}..."
+
+curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 "${OPENSSL_URL}" -o openssl.tar.gz || {
+	print_log "ERROR: OpenSSL download failed. Aborting."
+	exit 1
+}
+
+print_log "Verifying OpenSSL archive SHA-256..."
+
+if ! printf '%s  %s\n' "${OPENSSL_SHA256}" "openssl.tar.gz" | sha256sum --check --status; then
+	print_log "ERROR: OpenSSL SHA-256 verification failed. Aborting."
+	print_log "Expected: ${OPENSSL_SHA256}"
+	print_log "Actual:   $(sha256sum openssl.tar.gz | awk '{print $1}')"
+
+	rm -f openssl.tar.gz
+
+	exit 1
+fi
+
+print_log "OpenSSL archive SHA-256 verified"
+
+tar -xzf openssl.tar.gz || {
+	print_log "ERROR: OpenSSL archive extraction failed. Aborting."
+	exit 1
+}
+
+mv openssl-* openssl-src
+
 print_log "Building OpenSSL ${OPENSSL_VER} (Static)..."
 
 timer_start
 
-cd "${WORKDIR}"
-
-curl -fsSL "${OPENSSL_URL}" -o openssl.tar.gz
-
-tar -xzf openssl.tar.gz
-
-mv openssl-* openssl-src
-
 cd openssl-src
 
-# Configure: Static libs, no tests, optimized
+# Configure: Static libs, optimized
 ./Configure \
 	--prefix="${STATIC_SSL_PATH}" \
 	--libdir=lib \
 	--openssldir="${STATIC_SSL_PATH}/ssl" \
-	no-shared no-tests no-apps no-docs \
+	no-shared no-apps no-docs \
 	enable-ec_nistp_64_gcc_128 \
 	enable-tls1_3 enable-quic \
 	enable-ktls \
@@ -108,11 +138,19 @@ cd openssl-src
 
 make -j"$(nproc)" || {
 	print_log "ERROR: OpenSSL build failed. Aborting."
+
+	exit 1
+}
+
+make test || {
+	print_log "ERROR: OpenSSL tests failed. Aborting."
+
 	exit 1
 }
 
 make install_sw || {
 	print_log "ERROR: OpenSSL install failed. Aborting."
+
 	exit 1
 }
 
@@ -136,14 +174,20 @@ print_log "OpenSSL static libraries verified"
 ##
 
 # Headers More Module
-print_log "Cloning headers-more-nginx-module..."
+print_log "Cloning headers-more-nginx-module at ${HEADERS_MORE_REF}..."
 
-git clone --depth 1 https://github.com/openresty/headers-more-nginx-module.git "${WORKDIR}/headers-more-nginx-module"
+git clone https://github.com/openresty/headers-more-nginx-module.git "${WORKDIR}/headers-more-nginx-module"
+
+git -C "${WORKDIR}/headers-more-nginx-module" checkout --detach "${HEADERS_MORE_REF}"
 
 # Brotli Module
-print_log "Cloning ngx_brotli module..."
+print_log "Cloning ngx_brotli at ${NGX_BROTLI_REF}..."
 
-git clone --recurse-submodules --depth 1 https://github.com/google/ngx_brotli.git "${WORKDIR}/ngx_brotli"
+git clone --recurse-submodules https://github.com/google/ngx_brotli.git "${WORKDIR}/ngx_brotli"
+
+git -C "${WORKDIR}/ngx_brotli" checkout --detach "${NGX_BROTLI_REF}"
+
+git -C "${WORKDIR}/ngx_brotli" submodule update --init --recursive
 
 # Build brotli library (static)
 print_log "Building Brotli library..."
@@ -156,7 +200,7 @@ mkdir -p out
 
 cd out
 
-cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_FLAGS="-Ofast -march=native -mtune=native -fPIC" .. || {
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_C_FLAGS="${BROTLI_CFLAGS}" .. || {
 	print_log "ERROR: Brotli cmake failed. Aborting."
 
 	exit 1
@@ -240,7 +284,7 @@ sed -i 's/--with-openssl=[^ ]*//g' "${RULES}"
 sed -i "s|--with-cc-opt=\"|--with-cc-opt=\"-I${STATIC_SSL_PATH}/include -I${WORKDIR}/ngx_brotli/deps/brotli/c/include |g" "${RULES}"
 
 # Inject Linker Flags
-sed -i "s|--with-ld-opt=\"|--with-ld-opt=\"-L${STATIC_SSL_PATH}/lib -L${WORKDIR}/ngx_brotli/deps/brotli/out -Wl,-Bstatic -lssl -lcrypto -lbrotlienc -lbrotlicommon -Wl,-Bdynamic -lz -lzstd -ldl -lpthread |g" "${RULES}"
+sed -i "s|--with-ld-opt=\"|--with-ld-opt=\"-L${STATIC_SSL_PATH}/lib -L${WORKDIR}/ngx_brotli/deps/brotli/out -Wl,-Bstatic -lssl -lcrypto -lbrotlienc -lbrotlicommon -Wl,-Bdynamic -Wl,-z,relro,-z,now -lz -lzstd -ldl -lpthread |g" "${RULES}"
 
 # Ensure HTTP/3 is enabled
 if ! grep -q "with-http_v3_module" "${RULES}"; then
@@ -288,7 +332,7 @@ print_log "Building Nginx Package..."
 
 timer_start
 
-DEB_BUILD_OPTIONS=nocheck CC=gcc dpkg-buildpackage -b -uc -us -j"$(nproc)" -d || {
+DEB_BUILD_OPTIONS=nocheck DEB_CFLAGS_MAINT_APPEND="-fstack-clash-protection" CC=gcc dpkg-buildpackage -b -uc -us -j"$(nproc)" -d || {
 	PRINT_ELAPSED=$(timer_stop)
 
 	print_log "ERROR: Nginx package build failed after ${PRINT_ELAPSED}. Check the log above."
@@ -302,14 +346,17 @@ print_log "Installing..."
 
 cd ..
 
-dpkg -i ./*.deb || true
+if ! dpkg -i ./*.deb; then
+	print_log "Local package install has unresolved dependencies; asking apt to resolve them..."
+
+	apt-get -y -f install
+fi
 
 apt-mark hold nginx
 
-apt-get -y -f install
-
 # Verify the installed binary matches expectations
 INSTALLED_VER=$(nginx -v 2>&1 | grep -oP 'nginx/\K[0-9.]+' || true)
+
 if [ -z "${INSTALLED_VER}" ]; then
 	print_log "ERROR: nginx binary not found or not working after install. Aborting."
 
@@ -317,8 +364,26 @@ if [ -z "${INSTALLED_VER}" ]; then
 fi
 
 INSTALLED_SSL=$(nginx -V 2>&1 | grep -oP 'built with OpenSSL \K[^ ]+' || true)
+
 if [ "${INSTALLED_SSL}" != "${OPENSSL_VER}" ]; then
-	print_log "WARNING: Built OpenSSL (${INSTALLED_SSL}) doesn't match requested version (${OPENSSL_VER})!"
+	print_log "ERROR: Built OpenSSL (${INSTALLED_SSL}) doesn't match requested version (${OPENSSL_VER})!"
+
+	exit 1
+fi
+
+# Verify linkage is static
+if ldd "$(command -v nginx)" 2>/dev/null | grep -qE 'libssl|libcrypto'; then
+	print_log "ERROR: nginx is dynamically linked to OpenSSL!"
+
+	exit 1
+fi
+
+# Report binary hardening status
+if command -v hardening-check >/dev/null 2>&1; then
+	print_log "nginx hardening status:"
+	hardening-check "$(command -v nginx)" || true
+else
+	print_log "hardening-check unavailable; skipping hardening report"
 fi
 
 print_log "Installed nginx ${INSTALLED_VER} with OpenSSL ${INSTALLED_SSL}"
@@ -357,6 +422,11 @@ nginx -V 2>&1
 
 # Verify the built binary actually uses our OpenSSL
 BUILT_SSL=$(nginx -V 2>&1 | grep -oP 'built with OpenSSL \K[^ ]+')
+
 if [ "${BUILT_SSL}" != "${OPENSSL_VER}" ]; then
-	print_log "WARNING: Built OpenSSL (${BUILT_SSL}) doesn't match requested version (${OPENSSL_VER})!"
+	print_log "ERROR: Built OpenSSL (${BUILT_SSL}) doesn't match requested version (${OPENSSL_VER})!"
+
+	exit 1
 fi
+
+print_log "All is good :)"
