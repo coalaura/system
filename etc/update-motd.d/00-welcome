@@ -21,7 +21,11 @@ _get_utc_date_with_ordinal() {
 
 printf "\n Hello %s, welcome back to %s" "$(whoami)" "$(hostname)"
 
+SERVER_PORT=$(echo "$SSH_CONNECTION" | awk '{print $4}')
 CLIENT_PORT=$(echo "$SSH_CONNECTION" | awk '{print $2}')
+
+PING=$(ss -tin "( sport = :$SERVER_PORT and dport = :$CLIENT_PORT )" 2>/dev/null | sed -nE 's/.*rtt:([0-9.]+)\/.*/\1/p' | awk '{ printf "%.0f", $1; exit }')
+
 LOGS=$(journalctl -u ssh -b -n 500 --no-pager)
 
 PID_LINE=$(echo "$LOGS" | grep "port $CLIENT_PORT" | grep -E "sshd(-session)?\[" | tail -n 1)
@@ -37,12 +41,18 @@ if [ -z "$ALGO" ]; then
 fi
 
 if [[ "$ALGO" =~ sntrup761|mlkem768 ]]; then
-	printf " \e[0;32m(^_^)\e[0m\n"
+	printf " \e[0;32m(^_^)"
 elif [[ "$ALGO" = "N/A" ]]; then
-	printf " \e[0;34m(._.)\e[0m\n"
+	printf " \e[0;34m(._.)"
 else
-	printf " \e[0;33m(>_<)\e[0m\n"
+	printf " \e[0;33m(>_<)"
 fi
+
+if [ -n "$PING" ]; then
+	printf " \e[0;90m· %s ms" "$PING"
+fi
+
+printf "\e[0m\n"
 
 printf "  %s\n" "$(_get_utc_date_with_ordinal)"
 
