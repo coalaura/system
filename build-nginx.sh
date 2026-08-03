@@ -8,7 +8,7 @@ set -Eeuo pipefail
 # apt-get update && apt-cache showsrc nginx | awk '$1 == "Version:" { print $2; exit }'
 NGINX_TRACK="stable"
 NGINX_DEB_VERSION="1.30.3-1~bookworm"
-NGINX_UPSTREAM_VERSION="1.30.3"
+NGINX_UPSTREAM_VERSION="1.30.4"
 NGINX_SIGNING_KEY_FPRS=(
 	"8540A6F18833A80E9C1653A42FD21310B49F6B46" # signing-key-2@nginx.com
 	"573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62" # signing-key@nginx.com
