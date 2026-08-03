@@ -37,6 +37,16 @@ if [ "${EUID}" -ne 0 ]; then
 	exit 1
 fi
 
+# Ensure nginx versions make sense
+if [[ "${NGINX_DEB_VERSION}" != "${NGINX_UPSTREAM_VERSION}"-* ]]; then
+	printf 'ERROR: NGINX Debian package version does not match upstream version.\n' >&2
+	printf '  NGINX_UPSTREAM_VERSION: %s\n' "${NGINX_UPSTREAM_VERSION}" >&2
+	printf '  NGINX_DEB_VERSION:      %s\n' "${NGINX_DEB_VERSION}" >&2
+	printf 'Expected NGINX_DEB_VERSION to begin with: %s-\n' "${NGINX_UPSTREAM_VERSION}" >&2
+
+	exit 1
+fi
+
 # Ensure we use gcc for this (no zig/clang)
 export CC=gcc
 
