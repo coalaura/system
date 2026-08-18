@@ -49,6 +49,7 @@ Common, optimized, opinionated linux system/server configurations.
 ## Notes
 
 - Nginx is self-compiled with PQ, HTTP/3 and `headers-more-nginx-module` support; see [build-nginx.sh](build-nginx.sh).
+- Nginx uses [nwall](https://github.com/coalaura/nwall) for high-performance bot blocking.
 - MOTD scripts must be executable: `chmod +x`.
 - Test SSH configuration before restarting: `sshd -t`.
 - Mail configuration uses Postfix, Dovecot, and OpenDKIM with virtual Maildir users, TLS-only SMTP submission, Dovecot LMTP delivery and DKIM signing. See the service-specific READMEs.
