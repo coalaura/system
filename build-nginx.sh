@@ -21,7 +21,10 @@ OPENSSL_SHA256="736b467530f916737b7031310ccb21d8218c6229e61e8e160cd1d3458cd543a8
 HEADERS_MORE_REF="0bf283ff92017acd616814b0e5153e0ccf93e2c9" # identical to v0.40
 
 NGX_BROTLI_REF="a71f9312c2deb28875acc7bacfdd5695a111aa53" # 9 commits ahead of v1.0.0rc
-BROTLI_CFLAGS="-O3 -fPIC"
+
+BUILD_CFLAGS="-march=native -mtune=native -flto=auto"
+BUILD_LDFLAGS="-flto=auto"
+BROTLI_CFLAGS="-O3 -fPIC ${BUILD_CFLAGS}"
 
 STATIC_SSL_PATH="/opt/openssl-pq-static"
 WORKDIR="/root/build-nginx-pq"
@@ -126,136 +129,6 @@ apt-get install -y --no-install-recommends \
 	libpcre2-dev libssl-dev zlib1g-dev libzstd-dev
 
 ##
-# OpenSSL Build (Static)
-##
-
-cd "${WORKDIR}"
-
-print_log "Downloading OpenSSL ${OPENSSL_VER}..."
-
-OPENSSL_URL="https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VER}/openssl-${OPENSSL_VER}.tar.gz"
-
-curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 "${OPENSSL_URL}" -o openssl.tar.gz || {
-	print_log "ERROR: OpenSSL download failed. Aborting."
-	exit 1
-}
-
-print_log "Verifying OpenSSL archive SHA-256..."
-
-if ! printf '%s  %s\n' "${OPENSSL_SHA256}" "openssl.tar.gz" | sha256sum --check --status; then
-	print_log "ERROR: OpenSSL SHA-256 verification failed. Aborting."
-	print_log "Expected: ${OPENSSL_SHA256}"
-	print_log "Actual:   $(sha256sum openssl.tar.gz | awk '{print $1}')"
-
-	rm -f openssl.tar.gz
-
-	exit 1
-fi
-
-print_log "OpenSSL archive SHA-256 verified"
-
-OPENSSL_ARCHIVE_TOPDIR="openssl-${OPENSSL_VER}"
-
-if ! tar -tzf openssl.tar.gz | awk -F/ -v expected="${OPENSSL_ARCHIVE_TOPDIR}" '
-	BEGIN {
-		valid = 1
-		entries = 0
-	}
-
-	{
-		entries++
-
-		if ($1 != expected) {
-			valid = 0
-			exit
-		}
-	}
-
-	END {
-		exit !(valid && entries > 0)
-	}
-'; then
-	print_log "ERROR: OpenSSL archive has an unexpected directory layout. Aborting."
-
-	exit 1
-fi
-
-mkdir -p openssl-src
-
-if ! tar -xzf openssl.tar.gz --no-same-owner --no-same-permissions --strip-components=1 -C openssl-src; then
-	print_log "ERROR: OpenSSL archive extraction failed. Aborting."
-
-	exit 1
-fi
-
-if [ ! -f "openssl-src/Configure" ]; then
-	print_log "ERROR: Extracted OpenSSL source is missing Configure. Aborting."
-
-	exit 1
-fi
-
-print_log "Building OpenSSL ${OPENSSL_VER} (Static)..."
-
-timer_start
-
-cd openssl-src
-
-# Configure: Static libs, optimized
-./Configure \
-	--prefix="${STATIC_SSL_PATH}" \
-	--libdir=lib \
-	--openssldir="${STATIC_SSL_PATH}/ssl" \
-	no-shared no-apps no-docs \
-	enable-ec_nistp_64_gcc_128 \
-	enable-tls1_3 enable-quic \
-	enable-ktls \
-	enable-zlib \
-	enable-zstd \
-	no-dtls \
-	linux-x86_64
-
-make -j"$(nproc)" || {
-	print_log "ERROR: OpenSSL build failed. Aborting."
-
-	exit 1
-}
-
-make test || {
-	print_log "ERROR: OpenSSL tests failed. Aborting."
-
-	exit 1
-}
-
-make install_sw || {
-	print_log "ERROR: OpenSSL install failed. Aborting."
-
-	exit 1
-}
-
-BUILD_TIMES[OpenSSL]=$(timer_stop)
-
-print_log "OpenSSL installed to ${STATIC_SSL_PATH}"
-
-# Verify OpenSSL build produced valid static libraries.
-for lib in libssl.a libcrypto.a; do
-	lib_path="${STATIC_SSL_PATH}/lib/${lib}"
-
-	if [ ! -f "${lib_path}" ]; then
-		print_log "ERROR: OpenSSL build did not produce ${lib}. Aborting."
-
-		exit 1
-	fi
-
-	if ! ar t "${lib_path}" >/dev/null; then
-		print_log "ERROR: ${lib_path} is not a valid static archive. Aborting."
-
-		exit 1
-	fi
-done
-
-print_log "OpenSSL static libraries verified"
-
-##
 # Nginx Modules
 ##
 
@@ -335,7 +208,7 @@ make -j"$(nproc)" || {
 BUILD_TIMES[Brotli]=$(timer_stop)
 
 # Verify Brotli build produced valid static libraries.
-for lib in libbrotlienc.a libbrotlicommon.a; do
+for lib in libbrotlienc.a libbrotlidec.a libbrotlicommon.a; do
 	lib_path="${WORKDIR}/ngx_brotli/deps/brotli/out/${lib}"
 
 	if [ ! -f "${lib_path}" ]; then
@@ -352,6 +225,141 @@ for lib in libbrotlienc.a libbrotlicommon.a; do
 done
 
 print_log "Brotli static libraries verified"
+
+##
+# OpenSSL Build (Static)
+##
+
+cd "${WORKDIR}"
+
+print_log "Downloading OpenSSL ${OPENSSL_VER}..."
+
+OPENSSL_URL="https://github.com/openssl/openssl/releases/download/openssl-${OPENSSL_VER}/openssl-${OPENSSL_VER}.tar.gz"
+
+curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 "${OPENSSL_URL}" -o openssl.tar.gz || {
+	print_log "ERROR: OpenSSL download failed. Aborting."
+	exit 1
+}
+
+print_log "Verifying OpenSSL archive SHA-256..."
+
+if ! printf '%s  %s\n' "${OPENSSL_SHA256}" "openssl.tar.gz" | sha256sum --check --status; then
+	print_log "ERROR: OpenSSL SHA-256 verification failed. Aborting."
+	print_log "Expected: ${OPENSSL_SHA256}"
+	print_log "Actual:   $(sha256sum openssl.tar.gz | awk '{print $1}')"
+
+	rm -f openssl.tar.gz
+
+	exit 1
+fi
+
+print_log "OpenSSL archive SHA-256 verified"
+
+OPENSSL_ARCHIVE_TOPDIR="openssl-${OPENSSL_VER}"
+
+if ! tar -tzf openssl.tar.gz | awk -F/ -v expected="${OPENSSL_ARCHIVE_TOPDIR}" '
+	BEGIN {
+		valid = 1
+		entries = 0
+	}
+
+	{
+		entries++
+
+		if ($1 != expected) {
+			valid = 0
+			exit
+		}
+	}
+
+	END {
+		exit !(valid && entries > 0)
+	}
+'; then
+	print_log "ERROR: OpenSSL archive has an unexpected directory layout. Aborting."
+
+	exit 1
+fi
+
+mkdir -p openssl-src
+
+if ! tar -xzf openssl.tar.gz --no-same-owner --no-same-permissions --strip-components=1 -C openssl-src; then
+	print_log "ERROR: OpenSSL archive extraction failed. Aborting."
+
+	exit 1
+fi
+
+if [ ! -f "openssl-src/Configure" ]; then
+	print_log "ERROR: Extracted OpenSSL source is missing Configure. Aborting."
+
+	exit 1
+fi
+
+print_log "Building OpenSSL ${OPENSSL_VER} (Static)..."
+
+timer_start
+
+cd openssl-src
+
+# Configure: Static libs, optimized
+CFLAGS="-Wall -O3 ${BUILD_CFLAGS}" \
+LDFLAGS="${BUILD_LDFLAGS}" \
+./Configure \
+	--prefix="${STATIC_SSL_PATH}" \
+	--libdir=lib \
+	--openssldir="${STATIC_SSL_PATH}/ssl" \
+	--with-brotli-include="${WORKDIR}/ngx_brotli/deps/brotli/c/include" \
+	--with-brotli-lib="${WORKDIR}/ngx_brotli/deps/brotli/out" \
+	no-shared no-apps no-docs \
+	enable-ec_nistp_64_gcc_128 \
+	enable-tls1_3 enable-quic \
+	enable-ktls \
+	enable-brotli \
+	enable-zlib \
+	enable-zstd \
+	no-dtls \
+	linux-x86_64
+
+make -j"$(nproc)" || {
+	print_log "ERROR: OpenSSL build failed. Aborting."
+
+	exit 1
+}
+
+make test || {
+	print_log "ERROR: OpenSSL tests failed. Aborting."
+
+	exit 1
+}
+
+make install_sw || {
+	print_log "ERROR: OpenSSL install failed. Aborting."
+
+	exit 1
+}
+
+BUILD_TIMES[OpenSSL]=$(timer_stop)
+
+print_log "OpenSSL installed to ${STATIC_SSL_PATH}"
+
+# Verify OpenSSL build produced valid static libraries.
+for lib in libssl.a libcrypto.a; do
+	lib_path="${STATIC_SSL_PATH}/lib/${lib}"
+
+	if [ ! -f "${lib_path}" ]; then
+		print_log "ERROR: OpenSSL build did not produce ${lib}. Aborting."
+
+		exit 1
+	fi
+
+	if ! ar t "${lib_path}" >/dev/null; then
+		print_log "ERROR: ${lib_path} is not a valid static archive. Aborting."
+
+		exit 1
+	fi
+done
+
+print_log "OpenSSL static libraries verified"
 
 ##
 # Nginx Source
@@ -482,10 +490,15 @@ grep -n "\./configure" "${RULES}" | head -5
 sed -i 's/--with-openssl=[^ ]*//g' "${RULES}"
 
 # Inject Include Paths
-sed -i "s|--with-cc-opt=\"|--with-cc-opt=\"-I${STATIC_SSL_PATH}/include -I${WORKDIR}/ngx_brotli/deps/brotli/c/include |g" "${RULES}"
+sed -i "s|--with-cc-opt=\"|--with-cc-opt=\"${BUILD_CFLAGS} -I${STATIC_SSL_PATH}/include -I${WORKDIR}/ngx_brotli/deps/brotli/c/include |g" "${RULES}"
 
 # Inject Linker Flags
-sed -i "s|--with-ld-opt=\"|--with-ld-opt=\"-L${STATIC_SSL_PATH}/lib -L${WORKDIR}/ngx_brotli/deps/brotli/out -Wl,-Bstatic -lssl -lcrypto -lbrotlienc -lbrotlicommon -Wl,-Bdynamic -Wl,-z,relro,-z,now -lz -lzstd -ldl -lpthread |g" "${RULES}"
+sed -i "s|--with-ld-opt=\"|--with-ld-opt=\"${BUILD_LDFLAGS} -L${STATIC_SSL_PATH}/lib -L${WORKDIR}/ngx_brotli/deps/brotli/out -Wl,-Bstatic -lssl -lcrypto -lbrotlienc -lbrotlidec -lbrotlicommon -Wl,-Bdynamic -Wl,-z,relro,-z,now -lz -lzstd -ldl -lpthread |g" "${RULES}"
+
+# Ensure PCRE JIT is enabled
+if ! grep -q "with-pcre-jit" "${RULES}"; then
+	sed -i "s|\./configure |./configure --with-pcre-jit |g" "${RULES}"
+fi
 
 # Ensure HTTP/3 is enabled
 if ! grep -q "with-http_v3_module" "${RULES}"; then
@@ -684,9 +697,17 @@ if readelf -d "${NGINX_BINARY}" | grep -qE '\[(libssl|libcrypto)\.so'; then
 fi
 
 # Confirm the expected source and statically added modules were actually used.
-for required_option in "--with-http_v3_module" "--add-module=${WORKDIR}/headers-more-nginx-module" "--add-module=${WORKDIR}/ngx_brotli"; do
+for required_option in "--with-http_v3_module" "--with-pcre-jit" "--add-module=${WORKDIR}/headers-more-nginx-module" "--add-module=${WORKDIR}/ngx_brotli"; do
 	if ! grep -Fq -- "${required_option}" <<<"${NGINX_BUILD_INFO}"; then
 		print_log "ERROR: nginx was not built with required option: ${required_option}. Aborting."
+
+		exit 1
+	fi
+done
+
+for required_flag in "-march=native" "-mtune=native" "-flto=auto"; do
+	if ! grep -Fq -- "${required_flag}" <<<"${NGINX_BUILD_INFO}"; then
+		print_log "ERROR: nginx was not built with required compiler/linker flag: ${required_flag}. Aborting."
 
 		exit 1
 	fi
