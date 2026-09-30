@@ -189,7 +189,7 @@ if [ ! -f "${WORKDIR}/ngx_brotli/config" ] || [ ! -f "${WORKDIR}/ngx_brotli/deps
 	exit 1
 fi
 
-print_log "ngx_brotli pinned commit and submodules verified"
+print_log "ngx_brotli and Brotli pinned commits verified"
 
 # Build brotli library (static)
 print_log "Building Brotli library..."
