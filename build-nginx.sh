@@ -21,6 +21,7 @@ OPENSSL_SHA256="325b5c806167c13b40b1ffeadfe0248197c00eccc4cf123ec1e28d2d2fd216d9
 HEADERS_MORE_REF="0bf283ff92017acd616814b0e5153e0ccf93e2c9" # identical to v0.40
 
 NGX_BROTLI_REF="a71f9312c2deb28875acc7bacfdd5695a111aa53" # 9 commits ahead of v1.0.0rc
+BROTLI_REF="028fb5a23661f123017c060daa546b55cf4bde29" # v1.2.0
 
 BUILD_CFLAGS="-march=native -mtune=native -flto=auto"
 BUILD_LDFLAGS="-flto=auto"
@@ -171,6 +172,14 @@ if [ "$(git -C "${WORKDIR}/ngx_brotli" rev-parse HEAD)" != "${NGX_BROTLI_REF}" ]
 fi
 
 git -C "${WORKDIR}/ngx_brotli" -c protocol.file.allow=never submodule update --init --recursive
+
+git -C "${WORKDIR}/ngx_brotli/deps/brotli" checkout --detach "${BROTLI_REF}"
+
+if [ "$(git -C "${WORKDIR}/ngx_brotli/deps/brotli" rev-parse HEAD)" != "${BROTLI_REF}" ]; then
+	print_log "ERROR: Brotli checkout does not match pinned commit ${BROTLI_REF}. Aborting."
+
+	exit 1
+fi
 
 git -C "${WORKDIR}/ngx_brotli" submodule foreach --recursive 'git fsck --full --no-dangling'
 
