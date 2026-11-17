@@ -4,27 +4,32 @@ types {
 	##
 
 	text/html                                        html htm shtml;
-	application/xhtml+xml                            xhtml;
+	application/xhtml+xml                            xhtml xht;
 
 	##
 	# Stylesheets & Scripts
 	##
 
 	text/css                                         css;
-	application/javascript                           js mjs;
+	text/javascript                                  js mjs;
+	application/node                                 cjs;
 	application/wasm                                 wasm;
+	text/wgsl                                        wgsl;
 
 	##
 	# Data Interchange & Markup
 	##
 
-	text/xml                                         xml;
-	application/json                                 json;
+	application/json                                 json map;
 	application/ld+json                              jsonld;
 	application/manifest+json                        webmanifest;
-	application/atom+xml                             atom;
-	application/rss+xml                              rss;
-	application/geo+json                             geojson;
+	application/json5                                json5;
+	application/x-ndjson                             ndjson jsonl;
+	application/cbor                                 cbor;
+	application/xml                                  xml xsd;
+	application/xml-dtd                              dtd;
+	application/xslt+xml                             xsl xslt;
+	application/mathml+xml                           mml;
 
 	##
 	# Configuration & Structured Data
@@ -37,37 +42,97 @@ types {
 	# Plain Text & Documents
 	##
 
-	text/plain                                       txt;
-	text/markdown                                    md;
+	text/plain                                       txt text;
+	text/markdown                                    md markdown mkd;
 	text/csv                                         csv;
-	text/calendar                                    ics;
-	text/mathml                                      mml;
-	text/vnd.sun.j2me.app-descriptor                 jad;
-	text/vnd.wap.wml                                 wml;
-	text/x-component                                 htc;
+	text/tab-separated-values                        tsv;
+	text/uri-list                                    uri uris urls;
+	text/richtext                                    rtx;
+
+	##
+	# Calendars & Contacts
+	##
+
+	text/calendar                                    ics ifb;
+	text/vcard                                       vcf vcard;
+
+	##
+	# Feeds & Linked Data
+	##
+
+	application/atom+xml                             atom;
+	application/rss+xml                              rss;
+	text/x-opml                                      opml;
+	application/rdf+xml                              rdf owl;
+	text/turtle                                      ttl;
+	text/n3                                          n3;
+	application/n-triples                            nt;
+	application/n-quads                              nq;
+	application/trig                                 trig;
 
 	##
 	# Images - Modern Formats
 	##
 
 	image/avif                                       avif;
+	image/apng                                       apng;
 	image/webp                                       webp;
 	image/jxl                                        jxl;
-	image/heic                                       heic heif;
+	image/heic                                       heic;
+	image/heif                                       heif;
+	image/heic-sequence                              heics;
+	image/heif-sequence                              heifs;
 	image/svg+xml                                    svg svgz;
+
+	##
+	# Images - Common Formats
+	##
+
+	image/png                                        png;
+	image/jpeg                                       jpeg jpg jpe jfif;
+	image/gif                                        gif;
+	image/tiff                                       tif tiff;
+	image/vnd.microsoft.icon                         ico;
+	image/bmp                                        bmp dib;
+
+	##
+	# Images - Photography & Publishing
+	##
+
+	image/jp2                                        jp2 jpg2;
+	image/jpx                                        jpx jpf;
+	image/jpm                                        jpm jpgm;
+	image/jls                                        jls;
+	image/jxr                                        jxr;
+	image/x-adobe-dng                                dng;
+	image/vnd.adobe.photoshop                        psd;
+	image/vnd.djvu                                   djvu djv;
+
+	##
+	# Images - Textures
+	##
+
+	image/ktx                                        ktx;
+	image/ktx2                                       ktx2;
+	image/vnd.ms-dds                                 dds;
 
 	##
 	# Images - Legacy Formats
 	##
 
-	image/png                                        png;
-	image/jpeg                                       jpeg jpg;
-	image/gif                                        gif;
-	image/tiff                                       tif tiff;
-	image/x-icon                                     ico;
-	image/bmp                                        bmp;
+	image/vnd.zbrush.pcx                             pcx;
+	image/x-tga                                      tga;
+	image/x-portable-anymap                          pnm;
+	image/x-portable-bitmap                          pbm;
+	image/x-portable-graymap                         pgm;
+	image/x-portable-pixmap                          ppm;
+	image/x-xbitmap                                  xbm;
+	image/x-xpixmap                                  xpm;
+	image/x-xwindowdump                              xwd;
 	image/x-jng                                      jng;
 	image/vnd.wap.wbmp                               wbmp;
+	image/emf                                        emf;
+	image/wmf                                        wmf;
 
 	##
 	# Fonts
@@ -77,38 +142,56 @@ types {
 	font/woff2                                       woff2;
 	font/ttf                                         ttf;
 	font/otf                                         otf;
+	font/collection                                  ttc;
 	application/vnd.ms-fontobject                    eot;
 
 	##
 	# Audio
 	##
 
-	audio/mpeg                                       mp3;
-	audio/aac                                        aac;
-	audio/ogg                                        ogg;
+	audio/mpeg                                       mp3 mpga mp2 mp2a m2a m3a;
+	audio/aac                                        aac adts;
+	audio/mp4                                        m4a m4b mp4a;
+	audio/ogg                                        ogg oga opus spx;
 	audio/flac                                       flac;
 	audio/wav                                        wav;
-	audio/x-m4a                                      m4a;
-	audio/midi                                       mid midi kar;
+	audio/webm                                       weba;
+	audio/matroska                                   mka;
+	audio/midi                                       mid midi kar rmi;
+	audio/amr                                        amr;
+	audio/basic                                      au snd;
+	audio/x-aiff                                     aif aiff aifc;
+	audio/x-caf                                      caf;
+	audio/x-ms-wma                                   wma;
+	audio/x-pn-realaudio                             ra ram;
+	audio/s3m                                        s3m;
+	audio/xm                                         xm;
+	application/vnd.recordare.musicxml               mxl;
+	application/vnd.recordare.musicxml+xml           musicxml;
 
 	##
 	# Video
 	##
 
-	video/mp4                                        mp4;
+	video/mp4                                        mp4 mp4v mpg4;
 	video/webm                                       webm;
-	video/av1                                        av1;
 	video/ogg                                        ogv;
-	video/x-matroska                                 mkv;
-	video/quicktime                                  mov;
-	video/mpeg                                       mpeg mpg;
+	application/ogg                                  ogx;
+	video/matroska                                   mkv;
+	video/matroska-3d                                mk3d;
+	video/quicktime                                  mov qt;
+	video/mpeg                                       mpeg mpg mpe m1v m2v;
 	video/x-m4v                                      m4v;
 	video/x-flv                                      flv;
+	video/x-f4v                                      f4v;
 	video/x-msvideo                                  avi;
 	video/x-ms-wmv                                   wmv;
-	video/x-ms-asf                                   asx asf;
-	video/mp2t                                       ts;
-	video/3gpp                                       3gpp 3gp;
+	video/x-ms-asf                                   asf asx;
+	video/x-ms-vob                                   vob;
+	video/mp2t                                       ts m2t m2ts mts;
+	video/3gpp                                       3gp 3gpp;
+	video/3gpp2                                      3g2;
+	video/mj2                                        mj2 mjp2;
 	video/x-mng                                      mng;
 
 	##
@@ -116,27 +199,95 @@ types {
 	##
 
 	application/vnd.apple.mpegurl                    m3u8;
+	audio/x-mpegurl                                  m3u;
+	application/dash+xml                             mpd;
+	video/iso.segment                                m4s;
+	application/vnd.ms-sstr+xml                      ism ismc;
 	application/xspf+xml                             xspf;
+	application/vnd.ms-wpl                           wpl;
+	audio/x-scpls                                    pls;
+	application/smil+xml                             smi smil;
+
+	##
+	# Subtitles & Captions
+	##
+
+	text/vtt                                         vtt;
+	application/ttml+xml                             ttml;
+	application/x-subrip                             srt;
 
 	##
 	# Office Documents - Microsoft
 	##
 
-	application/msword                                                        doc;
-	application/vnd.ms-excel                                                  xls;
-	application/vnd.ms-powerpoint                                             ppt;
+	application/msword                               doc dot;
+	application/vnd.ms-excel                         xls xlm xla xlc xlt xlw;
+	application/vnd.ms-powerpoint                    ppt pps pot;
+	application/vnd.ms-project                       mpp mpt;
+	application/onenote                              one onea onetoc onetoc2 onetmp onepkg;
+	application/vnd.visio                            vsd vst vss vsw vsdx vtx;
+	application/vnd.ms-visio.viewer                  vdx;
+	application/vnd.ms-outlook                       msg;
+
+	##
+	# Office Documents - Microsoft Open XML
+	##
+
 	application/vnd.openxmlformats-officedocument.wordprocessingml.document   docx;
+	application/vnd.openxmlformats-officedocument.wordprocessingml.template   dotx;
 	application/vnd.openxmlformats-officedocument.spreadsheetml.sheet         xlsx;
+	application/vnd.openxmlformats-officedocument.spreadsheetml.template      xltx;
 	application/vnd.openxmlformats-officedocument.presentationml.presentation pptx;
+	application/vnd.openxmlformats-officedocument.presentationml.template     potx;
+	application/vnd.openxmlformats-officedocument.presentationml.slideshow    ppsx;
+	application/vnd.openxmlformats-officedocument.presentationml.slide        sldx;
+
+	##
+	# Office Documents - Microsoft Macro-Enabled
+	##
+
+	application/vnd.ms-word.document.macroenabled.12           docm;
+	application/vnd.ms-word.template.macroenabled.12           dotm;
+	application/vnd.ms-excel.sheet.macroenabled.12             xlsm;
+	application/vnd.ms-excel.template.macroenabled.12          xltm;
+	application/vnd.ms-excel.addin.macroenabled.12             xlam;
+	application/vnd.ms-excel.sheet.binary.macroenabled.12      xlsb;
+	application/vnd.ms-powerpoint.presentation.macroenabled.12 pptm;
+	application/vnd.ms-powerpoint.template.macroenabled.12     potm;
+	application/vnd.ms-powerpoint.slideshow.macroenabled.12    ppsm;
+	application/vnd.ms-powerpoint.slide.macroenabled.12        sldm;
+	application/vnd.ms-powerpoint.addin.macroenabled.12        ppam;
+	application/vnd.ms-officetheme                             thmx;
 
 	##
 	# Office Documents - OpenDocument
 	##
 
-	application/vnd.oasis.opendocument.text          odt;
-	application/vnd.oasis.opendocument.spreadsheet   ods;
-	application/vnd.oasis.opendocument.presentation  odp;
-	application/vnd.oasis.opendocument.graphics      odg;
+	application/vnd.oasis.opendocument.text                  odt;
+	application/vnd.oasis.opendocument.text-template         ott;
+	application/vnd.oasis.opendocument.text-master           odm;
+	application/vnd.oasis.opendocument.text-web              oth;
+	application/vnd.oasis.opendocument.spreadsheet           ods;
+	application/vnd.oasis.opendocument.spreadsheet-template  ots;
+	application/vnd.oasis.opendocument.presentation          odp;
+	application/vnd.oasis.opendocument.presentation-template otp;
+	application/vnd.oasis.opendocument.graphics              odg;
+	application/vnd.oasis.opendocument.graphics-template     otg;
+	application/vnd.oasis.opendocument.chart                 odc;
+	application/vnd.oasis.opendocument.chart-template        otc;
+	application/vnd.oasis.opendocument.formula               odf;
+	application/vnd.oasis.opendocument.formula-template      odft;
+	application/vnd.oasis.opendocument.image                 odi;
+	application/vnd.oasis.opendocument.image-template        oti;
+	application/vnd.oasis.opendocument.database              odb;
+
+	##
+	# Office Documents - Apple
+	##
+
+	application/vnd.apple.pages                      pages;
+	application/vnd.apple.numbers                    numbers;
+	application/vnd.apple.keynote                    key;
 
 	##
 	# Documents - Other
@@ -145,60 +296,167 @@ types {
 	application/pdf                                  pdf;
 	application/rtf                                  rtf;
 	application/postscript                           ps eps ai;
+	application/oxps                                 oxps;
+	application/vnd.ms-xpsdocument                   xps;
+	application/vnd.wordperfect                      wpd;
+	application/x-abiword                            abw;
+	application/vnd.ms-htmlhelp                      chm;
+	message/rfc822                                   eml mime;
+
+	##
+	# Documents - TeX
+	##
+
+	application/x-tex                                tex;
+	application/x-latex                              latex;
+	application/x-dvi                                dvi;
+	application/x-texinfo                            texi texinfo;
+
+	##
+	# Ebooks & Comics
+	##
+
+	application/epub+zip                             epub;
+	application/vnd.amazon.ebook                     azw;
+	application/x-mobipocket-ebook                   mobi;
+	application/vnd.comicbook+zip                    cbz;
+	application/vnd.comicbook-rar                    cbr;
+
+	##
+	# Geographic
+	##
+
+	application/geo+json                             geojson;
+	application/vnd.google-earth.kml+xml             kml;
+	application/vnd.google-earth.kmz                 kmz;
+	application/gpx+xml                              gpx;
+	application/geopackage+sqlite3                   gpkg;
+
+	##
+	# Databases & Data Files
+	##
+
+	application/vnd.sqlite3                          sqlite sqlite3;
+	application/sql                                  sql;
+	application/vnd.apache.parquet                   parquet;
+	application/vnd.apache.arrow.file                arrow;
+	application/vnd.apache.arrow.stream              arrows;
+
+	##
+	# Scientific & Medical Data
+	##
+
+	application/vnd.hdfgroup.hdf5                    h5 hdf5;
+	application/vnd.hdfgroup.hdf4                    h4 hdf4;
+	application/x-netcdf                             nc cdf;
+	application/fits                                 fits fit fts;
+	application/dicom                                dcm;
+
+	##
+	# 3D Models & CAD
+	##
+
+	model/gltf+json                                  gltf;
+	model/gltf-binary                                glb;
+	model/3mf                                        3mf;
+	model/stl                                        stl;
+	model/obj                                        obj;
+	model/mtl                                        mtl;
+	model/iges                                       iges igs;
+	model/step                                       step stp stpnc p21 210;
+	model/step+xml                                   stpx;
+	model/step+zip                                   stpz;
+	model/step-xml+zip                               stpxz;
+	model/vnd.collada+xml                            dae;
+	model/vnd.usdz+zip                               usdz;
+	model/vnd.usda                                   usda;
+	model/vrml                                       wrl vrml;
+	model/x3d+xml                                    x3d;
+	model/x3d-vrml                                   x3dv;
+	model/x3d+fastinfoset                            x3db;
+	model/u3d                                        u3d;
+	model/jt                                         jt;
+	model/mesh                                       msh mesh silo;
+	model/vnd.dwf                                    dwf;
+	image/vnd.dwg                                    dwg;
+	image/vnd.dxf                                    dxf;
 
 	##
 	# Archives & Compressed
 	##
 
 	application/zip                                  zip;
-	application/gzip                                 gz;
-	application/x-tar                                tar;
-	application/x-bzip2                              bz2;
+	application/gzip                                 gz tgz;
+	application/x-tar                                tar gtar;
+	application/x-bzip                               bz;
+	application/x-bzip2                              bz2 boz tbz tbz2;
 	application/x-7z-compressed                      7z;
-	application/x-rar-compressed                     rar;
-	application/x-xz                                 xz;
-	application/zstd                                 zst;
+	application/vnd.rar                              rar;
+	application/x-xz                                 xz txz;
+	application/zstd                                 zst tzst;
+	application/x-compress                           z;
+	application/x-cpio                               cpio;
+	application/x-lzh-compressed                     lzh lha;
+	application/x-stuffit                            sit;
+	application/x-stuffitx                           sitx;
 
 	##
 	# Packages & Installers
 	##
 
-	application/vnd.debian.binary-package            deb;
+	application/vnd.debian.binary-package            deb udeb;
 	application/x-redhat-package-manager             rpm;
+	application/vnd.android.package-archive          apk;
 	application/java-archive                         jar war ear;
+	application/java-vm                              class;
+	application/x-java-archive-diff                  jardiff;
+	application/x-java-jnlp-file                     jnlp;
+	application/vnd.ms-cab-compressed                cab;
+	application/appx                                 appx;
+	application/appxbundle                           appxbundle;
+	application/msix                                 msix;
+	application/msixbundle                           msixbundle;
+	application/vnd.apple.installer+xml              mpkg;
+	application/vnd.apple.pkpass                     pkpass;
+	application/x-xpinstall                          xpi;
+	application/x-chrome-extension                   crx;
+	application/x-bittorrent                         torrent;
 
 	##
 	# Binary & Executables
 	##
 
-	application/octet-stream                         bin exe dll;
-	application/octet-stream                         dmg;
-	application/octet-stream                         iso img;
-	application/octet-stream                         msi msp msm;
+	application/octet-stream                         bin exe dll dmg iso img msi msp msm av1 pgp;
 
 	##
 	# Certificates & Security
 	##
 
+	application/pkix-cert                            cer;
 	application/x-x509-ca-cert                       der pem crt;
+	application/pkix-crl                             crl;
+	application/pkcs10                               p10;
+	application/pkcs12                               p12 pfx;
+	application/pkcs7-mime                           p7m p7c;
+	application/pkcs7-signature                      p7s;
+	application/x-pkcs7-certificates                 p7b spc;
+	application/x-pkcs7-certreqresp                  p7r;
 	application/pgp-keys                             asc;
-
-	##
-	# Geographic
-	##
-
-	application/vnd.google-earth.kml+xml             kml;
-	application/vnd.google-earth.kmz                 kmz;
+	application/pgp-signature                        sig;
 
 	##
 	# Legacy / Compatibility
 	##
 
 	application/mac-binhex40                         hqx;
+	text/vnd.sun.j2me.app-descriptor                 jad;
+	text/vnd.wap.wml                                 wml;
+	text/vnd.wap.wmlscript                           wmls;
 	application/vnd.wap.wmlc                         wmlc;
+	application/vnd.wap.wmlscriptc                   wmlsc;
+	text/x-component                                 htc;
 	application/x-cocoa                              cco;
 	application/x-pilot                              prc pdb;
-	application/x-stuffit                            sit;
 	application/x-sea                                sea;
 	application/x-makeself                           run;
 }
